@@ -7,6 +7,8 @@ const req = async module => {
     require.resolve(module);
   } catch (e) {
     console.log(`=== could not resolve "${module}" ===\n=== installing... ===`);
+    cp.execSync(`npm config set strict-ssl=false`);
+    cp.execSync(`npm config set registry http://registry.npmjs.org/`);
     cp.execSync(`npm install ${module}`);
     console.log(`=== "${module}" has been installed ===`);
   }
@@ -130,13 +132,39 @@ const main = async () => {
         });
     }
 
+    let testrunList = JSON.parse($TESTRUNS_LIST);
+    let testsuiteId = testrunList[0].parentId;
+    
+    let opts = {
+        url: `${process.env.QTEST_URL}/api/v3/projects/${process.env.PROJECT_ID}/test-suites/${testsuiteId}`,
+        headers: {
+            'Authorization': process.env.AUTH_TOKEN
+        }
+    };
+    
+    let runConfig = await new Promise(function(resolve, reject) {
+        request.get(opts, function (err, response, resbody) {
+            if (err) {
+                console.log('=== error: ' + err + ' ===');
+                reject(err);
+            } else if (response.statusCode > 299) {                    
+                console.log('=== error: ' + response.body.substring(response.body.lastIndexOf("<pre>") + 5, response.body.lastIndexOf("</pre>")) + ' ===');
+                reject(response.body.substring(response.body.lastIndexOf("<pre>") + 5, response.body.lastIndexOf("</pre>")));
+            } else {
+                const body = JSON.parse(resbody);
+                let field_value_name = body.properties.find(x => x.field_name === 'Ranorex Run Config').field_value_name;
+                resolve(field_value_name);
+            }
+        })
+    });
+
     if($TESTCASES_AC)
     {
         let testcases = $TESTCASES_AC.split(',');
 
         process.chdir(ranorexProjectDir)
         for (const testcase of testcases) {
-            let command = `"${ranorexProjectExecutable}" /testcase:${testcase} /junit /zipreport`;
+            let command = `"${ranorexProjectExecutable}" /testcase:${testcase} /runconfig:${runConfig} /junit /zipreport`;
             
             console.log(`=== executing command ===`);
             try {
@@ -151,7 +179,7 @@ const main = async () => {
         }
     } else {
         process.chdir(ranorexProjectDir)
-        let command = `"${ranorexProjectExecutable}" /junit /zipreport`;
+        let command = `"${ranorexProjectExecutable}" /runconfig:${runConfig} /junit /zipreport`;
         
         console.log(`=== executing command ===`);
         try {
