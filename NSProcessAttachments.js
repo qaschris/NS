@@ -4,6 +4,7 @@
  * payload example:
         {
             "projectId": "122526",
+            "testsuiteId": "1234567"
             "logs": [
                 {
                 "status": "passed",
