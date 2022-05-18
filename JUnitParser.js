@@ -15,7 +15,7 @@ exports.handler = function ({ event: body, constants, triggers }, context, callb
                 
         var payload = body;
         var projectId = payload.projectId;
-        var cycleId = payload.testcycle;
+        var testsuiteId = payload.testsuiteId;
         var testLogs = [];
         let cycleName;
 
@@ -221,7 +221,7 @@ exports.handler = function ({ event: body, constants, triggers }, context, callb
 
         var formattedResults = {
             "projectId": projectId,
-            "testcycle": cycleId,
+            "testsuiteId": testsuiteId,
             "logs": testLogs,
             "attachment": payload.attachment
         };
