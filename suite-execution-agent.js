@@ -62,8 +62,8 @@ const main = async () => {
             rxzlogFilename = files.find(x => x.file.endsWith('.rxzlog')).file;
             
             // read file contents
-            junit = fs.readFileSync(path.join(reportDir, junitFilename));
-            rxzlog = fs.readFileSync(path.join(reportDir, rxzlogFilename));
+            junit = fs.readFileSync(path.join(reportDir, junitFilename), 'utf8');
+            rxzlog = fs.readFileSync(path.join(reportDir, rxzlogFilename), 'utf8');
 
             console.log('=== read results file successfully ===');
         } catch(e) {
