@@ -4,6 +4,7 @@
  * payload example:
     {
         "projectId": "122526",
+        "testsuiteId": "1234567"
         "logs": [
             {
             "status": "passed",
@@ -112,7 +113,7 @@ exports.handler = async function ({ event: body, constants, triggers }, context,
                     console.log('[ERROR] (searchForTestRun):' + error);
                     return reject(error);
                 } else {
-                    console.log('[DEBUG] (searchForTestRun): ' + response.body);
+                    console.log('[DEBUG] (searchForTestRun): Returned: ' + response.body);
                     return resolve(response.body);
                 }
             });
@@ -280,6 +281,7 @@ exports.handler = async function ({ event: body, constants, triggers }, context,
 
 	var testLogs = payload.logs;
 	var projectId = payload.projectId;
+    var testsuiteId = payload.testsuiteId;
 	
 	console.log('[INFO]: About to collect Folder information...');
 	let qTestFoldersList;
@@ -312,6 +314,7 @@ exports.handler = async function ({ event: body, constants, triggers }, context,
 		let currentTestRunParentCycleId;
 		let currentTestRunParentSuiteId;
 		let currentAutomationContent = testLogs[i].automation_content;
+        console.log('[INFO]: Finding Test Runs...');
 		await searchForTestRun(projectId, currentAutomationContent).then(async(object) => {
 			foundTestRun = JSON.parse(object);
 			if (foundTestRun.items.length == 0) {
@@ -353,10 +356,19 @@ exports.handler = async function ({ event: body, constants, triggers }, context,
 						createTestLog(projectId, currentTestRun, object);
 					});
 				});
-			} else if (foundTestRun.items.length == 1) {
-				// test run exists, add a new log
-				let testRunId = foundTestRun.items[0].id;
-				createTestLog(projectId, currentTestRun, testRunId);
+			} else if (foundTestRun.items.length >= 1) {
+				// test run exists, match parent
+                console.log('[INFO]: Test Runs found, matching parent ID...');
+                for (let r=0; r<foundTestRun.items.length; r++) {
+                    if (foundTestRun.items[r].parentId == testsuiteId) {
+                        console.log('[INFO]: Matching parent ID found, creating test log...');
+                        // add a new log
+                        let testRunId = foundTestRun.items[r].id;
+                        createTestLog(projectId, currentTestRun, testRunId);
+                    } else {
+                        console.log('[ERROR]: Test Run with matching parent ID not found!');
+                    }
+                }
 			};
 		}).catch((error) => {
 			console.log(error);
