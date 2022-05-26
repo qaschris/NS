@@ -16,13 +16,11 @@
                 ...
                 }
             ],
-            "attachments": [
-                {
+            "attachments": {
                 "name": "Test_Execution_20220216_120555.rxzlog",
                 "content_type": "application/zip",
                 "data": "UEsDBBQAAAgIAIVzUFR1jjg/kYQCANUsCQAkAAAAVGVzdF9F..."
-                }
-            ]
+            }
         }
  * constants:
  *  QTEST_TOKEN: the qTest user bearer token from the API/SDK section of the 'Resources' area
@@ -80,7 +78,7 @@ exports.handler = async function ({ event: body, constants, triggers }, context,
     let attachmentObject = {
         'name': payload.attachment.name,
         'content_type': payload.attachment.content_type,
-        'data': Buffer.from(payload.attachment.data, 'base64').toString('utf8')
+        'data': Buffer.from(payload.attachment.data, 'base64')
     };
 
     await uploadTestCaseAttachment(projectId, constants.NSAttachmentsCaseID, attachmentObject).then((object) => {
