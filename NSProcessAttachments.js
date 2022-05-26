@@ -16,7 +16,7 @@
                 ...
                 }
             ],
-            "attachments": {
+            "attachment": {
                 "name": "Test_Execution_20220216_120555.rxzlog",
                 "content_type": "application/zip",
                 "data": "UEsDBBQAAAgIAIVzUFR1jjg/kYQCANUsCQAkAAAAVGVzdF9F..."
