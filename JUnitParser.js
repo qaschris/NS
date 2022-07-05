@@ -43,7 +43,7 @@ exports.handler = function ({ event: body, constants, triggers }, context, callb
                         testsuites.forEach(function(testsuite) {
                             lastEndTime = 0;
                             suiteName = testsuite.$.name;
-                            console.log('Suite Name: ' + suiteName)
+                            console.log('[INFO]: Suite Name: ' + suiteName)
                             if (testsuite.testcase) {
                                 var testcases = Array.isArray(testsuite.testcase) ? testsuite.testcase : [testsuite.testcase];
                                 testcases.forEach(function(testcase) {
@@ -62,7 +62,7 @@ exports.handler = function ({ event: body, constants, triggers }, context, callb
                                     if (moduleNames.length == 0) {
                                         moduleNames.push(suiteName);
                                     }
-                                    console.log('Case Name: ' + className)
+                                    console.log('[INFO]: Case Name: ' + className)
                                     var classStatus = 'passed';
                                     if (lastEndTime == 0) {
                                         startTime = new Date(Date.parse(testsuite.$.timestamp)).toISOString();
@@ -78,23 +78,23 @@ exports.handler = function ({ event: body, constants, triggers }, context, callb
                                     var testFailure = Array.isArray(testcase.failure) ? testcase.failure : [testcase.failure];
                                     testFailure.forEach(function(failure) {
                                         if (failure) {
-                                            console.log(failure.$.type)
+                                            console.log('[INFO]: ' + failure.$.type)
                                             note = failure.$.type + ': ' + failure.$.message;
-                                            console.log(failure._)
+                                            console.log('[INFO]: ' + failure._)
                                             stack = failure._;
                                             classStatus = 'failed';
                                         }
                                     });
-
+        
                                     var testError = Array.isArray(testcase.error) ? testcase.error : [testcase.error];
                                     testError.forEach(function(error) {
                                         if (error) {
-                                            console.log(error.$.message)
+                                            console.log('[INFO]: ' + error.$.message)
                                             note = error.$.message;
                                             classStatus = 'failed';
                                         }
                                     });
-
+        
                                     var testSkipped = Array.isArray(testcase.skipped) ? testcase.skipped : [testcase.skipped];
                                     testSkipped.forEach(function(skipped) {
                                         if (skipped) {
@@ -127,11 +127,11 @@ exports.handler = function ({ event: body, constants, triggers }, context, callb
                                     lastEndTime = endTime;
                                 });
                             } else {                                
-                                console.log('Test Suite has no Test Cases, skipping.');
+                                console.log('[WARN]: Test Suite has no Test Cases, skipping.');
                             }
                         });
                     } else {
-                        console.log('Test Suites collection is empty, skipping.');
+                        console.log('[WARN]: Test Suites collection is empty, skipping.');
                     }
                 } else {
                     console.log('[INFO]: Test Suites collection doesn\'t exist, checking for singular test suite.');
@@ -213,19 +213,23 @@ exports.handler = function ({ event: body, constants, triggers }, context, callb
                             lastEndTime = endTime;
                         });
                     } else {
-                        console.log('[INFO]: Test Suite has no Test Cases, skipping.');
+                        console.log('[WARN]: Test Suite has no Test Cases, skipping.');
                     }
                 }
             }   
         });
 
-        var formattedResults = {
-            "projectId": projectId,
-            "testsuiteId": testsuiteId,
-            "logs": testLogs,
-            "attachment": payload.attachment
-        };
-
-        emitEvent('NSProcessAttachments', formattedResults);
+        if (testLogs.length > 0) {
+            var formattedResults = {
+                "projectId": projectId,
+                "testsuiteId": testsuiteId,
+                "logs": testLogs,
+                "attachment": payload.attachment
+            };
+    
+            emitEvent('NSProcessAttachments', formattedResults);
+        } else {
+            console.log('[ERROR]: No test cases selected for Ranorex RunConfig.  Please correct in Ranorex and run again.');
+        }
 
 };
