@@ -276,6 +276,36 @@ exports.handler = async function ({ event: body, constants, triggers }, context,
             });
         });
     }
+
+	const createTestCase = async(ProjectId, testCasePayload) => {
+        console.log('[DEBUG] (createTestCase): Executing with parameters ' + [ProjectId, JSON.stringify(testCasePayload)].join(', '));
+        return await new Promise(async(resolve, reject) => {
+			var newTestCasePayload = testCasePayload;
+
+            var options = {
+				'method': 'POST',
+                'url': 'https://'+constants.ManagerURL+'/api/v3/projects/'+ProjectId+'/test-case?parentId='+testSuiteId+'&parentType=test-suite',
+                'headers': {
+                'Authorization': 'Bearer ' + constants.QTEST_TOKEN,
+                'Accept-Type': 'application/json',
+                'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(newTestCasePayload)
+            };
+            console.log('[DEBUG] (createTestCase) Request: ' + JSON.stringify(newTestCasePayload));
+            request(options, function (error, response) {
+                if (error) {
+                    console.log('[ERROR] (createTestCase):' + JSON.stringify(error));
+                    return reject(error);
+                } else {
+                    console.log('[DEBUG]: ' + JSON.stringify(response));
+                    console.log('[DEBUG] (createTestCase): ' + response.body);
+                    let responseObject = JSON.parse(response.body);
+                    return resolve(responseObject.id);
+                }
+            });
+        });
+    }
   
 	var payload = body;
 
@@ -349,12 +379,29 @@ exports.handler = async function ({ event: body, constants, triggers }, context,
 					})
 				}
 				console.log('[DEBUG]: Cycle: ' + currentTestRunParentCycleId + ' Suite: ' + currentTestRunParentSuiteId);
+                console.log('[INFO]: Finding Test Case...');
 				await searchForTestCase(projectId, currentAutomationContent).then(async(object) => {
-					let foundTestCase = JSON.parse(object);
-					let testCaseId = foundTestCase.items[0].id;
-					await createTestRun(projectId, currentTestRunParentSuiteId, testCaseId, currentTestRun).then(async(object) => {
-						createTestLog(projectId, currentTestRun, object);
-					});
+                    let foundTestCase = JSON.parse(object);
+                    if (foundTestCase.items.length == 0) {
+                        console.log('[WARN]: Test Case with matching Automation Content not found!');
+                        console.log('[INFO]: Creating Test Case...');                                
+                        await createTestCase(projectId, currentTestRun).then(async(object) => {
+                            let createdTestCaseId = JSON.parse(object.id);
+                            console.log('[INFO]: Creating Test Run...');
+                            await createTestRun(projectId, currentTestRunParentSuiteId, createdTestCaseId, currentTestRun).then(async(object) => {
+                                let createdTestRunId = JSON.parse(object.id);
+                                console.log('[INFO]: Creating Test Log...');
+                                createTestLog(projectId, currentTestRun, createdTestRunId);
+                            });
+                        });
+                    } else if (foundTestCase.items.length >= 1){
+                        console.log('[INFO]: Creating Test Run...');
+                        await createTestRun(projectId, currentTestRunParentSuiteId, foundTestCase.id, currentTestRun).then(async(object) => {
+                            let createdTestRunId = JSON.parse(object.id);
+                            console.log('[INFO]: Creating Test Log...');
+                            createTestLog(projectId, currentTestRun, createdTestRunId);
+                        });
+                    }
 				});
 			} else if (foundTestRun.items.length >= 1) {
 				// test run exists, match parent
@@ -366,12 +413,22 @@ exports.handler = async function ({ event: body, constants, triggers }, context,
                         let testRunId = foundTestRun.items[r].id;
                         createTestLog(projectId, currentTestRun, testRunId);
                     } else {
-                        console.log('[ERROR]: Test Run with matching parent ID not found!');
+                        console.log('[WARN]: Test Run with matching parent ID not found!');
+                        console.log('[INFO]: Finding Test Case...');
+                        await searchForTestCase(projectId, currentAutomationContent).then(async(object) => {
+                            let foundTestCase = JSON.parse(object);
+                            console.log('[INFO]: Creating Test Run...');
+                            await createTestRun(projectId, currentTestRunParentSuiteId, foundTestCase[0].id, currentTestRun).then(async(object) => {
+                                let createdTestRunId = JSON.parse(object.id);
+                                console.log('[INFO]: Creating Test Log...');
+                                createTestLog(projectId, currentTestRun, createdTestRunId);
+                            });
+                        });
                     }
                 }
 			};
 		}).catch((error) => {
 			console.log(error);
-		})
+		});
 	}
 }
