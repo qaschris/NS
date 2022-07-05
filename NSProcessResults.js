@@ -383,8 +383,8 @@ exports.handler = async function ({ event: body, constants, triggers }, context,
 				await searchForTestCase(projectId, currentAutomationContent).then(async(object) => {
                     let foundTestCase = JSON.parse(object);
                     if (foundTestCase.items.length == 0) {
-                        console.log('[WARN]: Test Case with matching Automation Content not found!');
-                        console.log('[INFO]: Creating Test Case...');                                
+                        console.log('[ERROR]: Test Case with matching Automation Content not found!  Create and/or Update in qTest.');
+/*                         console.log('[INFO]: Creating Test Case...');                                
                         await createTestCase(projectId, currentTestRun).then(async(object) => {
                             let createdTestCaseId = JSON.parse(object.id);
                             console.log('[INFO]: Creating Test Run...');
@@ -393,7 +393,7 @@ exports.handler = async function ({ event: body, constants, triggers }, context,
                                 console.log('[INFO]: Creating Test Log...');
                                 createTestLog(projectId, currentTestRun, createdTestRunId);
                             });
-                        });
+                        }); */
                     } else if (foundTestCase.items.length >= 1){
                         console.log('[INFO]: Creating Test Run...');
                         await createTestRun(projectId, currentTestRunParentSuiteId, foundTestCase.id, currentTestRun).then(async(object) => {
