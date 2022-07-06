@@ -102,28 +102,30 @@ exports.handler = function ({ event: body, constants, triggers }, context, callb
                                         }
                                     });
 
-                                    console.log(classStatus);
+                                    console.log('[INFO]: ' + classStatus);
 
-                                    var testLog = {
-                                        status: classStatus,
-                                        name: className,
-                                        attachments: [],
-                                        note: note,
-                                        exe_start_date: startTime,
-                                        exe_end_date: endTime,
-                                        automation_content: htmlEntities(className),
-                                        module_names: moduleNames
-                                    };
-
-                                    if (stack !== '') {
+                                    if (classStatus !== 'skipped') {
+                                        var testLog = {
+                                            status: classStatus,
+                                            name: className,
+                                            attachments: [],
+                                            note: note,
+                                            exe_start_date: startTime,
+                                            exe_end_date: endTime,
+                                            automation_content: htmlEntities(className),
+                                            module_names: [cycleName, suiteName]
+                                        };
+                                        if (stack !== '') {
                                         testLog.attachments.push({
                                             name: `${className}.txt`,
                                             data: Buffer.from(stack).toString("base64"),
                                             content_type: "text/plain"
                                         });
+                                        }
+                                        testLogs.push(testLog);
+                                    } else {
+                                        console.log('[WARN]: Current test status of SKIPPED, test is not added to results collection.');
                                     }
-                                    //testLog.attachments.push(payload.consoleOutput[0]);
-                                    testLogs.push(testLog);
                                     lastEndTime = endTime;
                                 });
                             } else {                                
@@ -189,27 +191,30 @@ exports.handler = function ({ event: body, constants, triggers }, context, callb
                                 }
                             });
 
-                            console.log(classStatus);
+                            console.log('[INFO]: ' + classStatus);
 
-                            var testLog = {
-                                status: classStatus,
-                                name: className,
-                                attachments: [],
-                                note: note,
-                                exe_start_date: startTime,
-                                exe_end_date: endTime,
-                                automation_content: htmlEntities(className),
-                                module_names: [cycleName, suiteName]
-                            };
-                            if (stack !== '') {
-                            testLog.attachments.push({
-                                name: `${className}.txt`,
-                                data: Buffer.from(stack).toString("base64"),
-                                content_type: "text/plain"
-                            });
+                            if (classStatus !== 'skipped') {
+                                var testLog = {
+                                    status: classStatus,
+                                    name: className,
+                                    attachments: [],
+                                    note: note,
+                                    exe_start_date: startTime,
+                                    exe_end_date: endTime,
+                                    automation_content: htmlEntities(className),
+                                    module_names: [cycleName, suiteName]
+                                };
+                                if (stack !== '') {
+                                testLog.attachments.push({
+                                    name: `${className}.txt`,
+                                    data: Buffer.from(stack).toString("base64"),
+                                    content_type: "text/plain"
+                                });
+                                }
+                                testLogs.push(testLog);
+                            } else {
+                                console.log('[WARN]: Current test status of SKIPPED, test is not added to results collection.');
                             }
-                            //testLog.attachments.push(payload.consoleOutput[0]);
-                            testLogs.push(testLog);
                             lastEndTime = endTime;
                         });
                     } else {
