@@ -37,14 +37,14 @@ const main = async () => {
     const fs = await req('fs');
     const path = await req('path');
     const request = await req('request');
+    const express = await req('express');
+    const app = express();
     
-    const pulseUri = 'https://pulse-7.qtestnet.com/webhook/721bc940-e8f6-427f-b668-3b86ef064136';                                // Pulse parser webhook endpoint
-    const ranorexProjectDir = 'C:\\Users\\chrpe\\Documents\\Repository\\Tricentis.Pulse.Integrations\\NSCorp';                       // Ranorex project directory (e.g.: C:\RanorexProject\bin\Debug)
-    const ranorexProjectExecutable = 'C:\\Users\\chrpe\\Documents\\Repository\\Tricentis.Pulse.Integrations\\NSCorp';                // Ranorex executable name (e.g.: RxDatabase.exe)
+    const pulseUri = 'https://pulse-7.qtestnet.com/webhook/721bc940-e8f6-427f-b668-3b86ef064136'; // Pulse parser webhook endpoint
+    const ranorexProjectDir = 'C:\\Users\\chrpe\\Documents\\Repository\\Tricentis.Pulse.Integrations\\NSCorp'; // Ranorex project directory (e.g.: C:\RanorexProject\bin\Debug)
+    const ranorexProjectExecutable = 'C:\\Users\\chrpe\\Documents\\Repository\\Tricentis.Pulse.Integrations\\NSCorp\\Execute.exe'; // Ranorex executable name (e.g.: RxDatabase.exe)
+    const pythonBuildScript = 'C:\\Ranorex_Automation_Scripts\\PTC_Lab_Automation\\PTC_Lab_Automation\\TricentisIndividualTestRun.py'; // Location of the Python RunConfig editor and MSBuild script
     const reportDir = `${ranorexProjectDir}\\Reports`;  // Ranorex reports directory
-
-    // Build command line for test execution.  Place any scripts surrounding build/test procedures here.
-    // Comment out this section if build/test execution takes place elsewhere.    
     
     const uploadResults = async () => {
         let junit = '';
@@ -65,7 +65,7 @@ const main = async () => {
             
             // read file contents
             junit = fs.readFileSync(path.join(reportDir, junitFilename), 'utf8');
-            rxzlog = fs.readFileSync(path.join(reportDir, rxzlogFilename), 'utf8');
+            rxzlog = fs.readFileSync(path.join(reportDir, rxzlogFilename));
 
             console.log('=== read results file successfully ===');
         } catch(e) {
@@ -93,7 +93,7 @@ const main = async () => {
                     'content_type': 'application/zip',
                     'data': Buffer.from(rxzlog).toString('base64')
                 }
-                //'rxzlog': Buffer.from(rxzlog).toString('base64')    // convert to base64
+                //'rxzlog': Buffer.from(rxzlog).toString('base64')    // convert to base64 (not needed)
             };
         }
 
@@ -133,8 +133,8 @@ const main = async () => {
     }
 
     let testrunList = JSON.parse($TESTRUNS_LIST);
-    let testsuiteId = testrunList[0].parentId;
-    
+
+/*     
     let opts = {
         url: `${process.env.QTEST_URL}/api/v3/projects/${process.env.PROJECT_ID}/test-suites/${testsuiteId}`,
         headers: {
@@ -157,26 +157,54 @@ const main = async () => {
             }
         })
     });
-
+ */
+    // We scheduled test runs and therefore want to update the RunConfig and perform a rebuild of the exe.
+    // This component is handled by the external python script below.
     if($TESTCASES_AC)
     {
-        let testcases = $TESTCASES_AC.split(',');
+        let testcases = $TESTCASES_AC.split(' ');
 
-        process.chdir(ranorexProjectDir)
-        for (const testcase of testcases) {
-            let command = `"${ranorexProjectExecutable}" /testcase:${testcase} /runconfig:${runConfig} /junit /zipreport`;
-            
-            console.log(`=== executing command ===`);
-            try {
-                console.log(command);
-                execSync(command, {stdio: "inherit"});
-            } catch(e) {
-                console.log('=== error: ', e.stack, ' ===');
-            }
-            console.log(`=== command completed ===`);
-    
-            await uploadResults();
+        let runPythonScript = new Promise(function(success, nosuccess) {
+
+            const { spawn } = require('child_process');
+            const pythonScript = spawn('python', [pythonBuildScript, testcases]);
+        
+            pythonScript.stdout.on('data', function(data) {
+        
+                success(data);
+            });
+        
+            pythonScript.stderr.on('data', (data) => {
+        
+                nosuccess(data);
+            });
+        });
+        
+        app.get('/', (req, res) => {
+        
+            res.write('welcome\n');
+        
+            runPythonScript.then(function(fromPythonScript) {
+                console.log(fromPythonScript.toString());
+                res.end(fromPythonScript);
+            });
+        })
+        
+        app.listen(4000, () => console.log('Application listening on port 4000!'))
+
+        let command = `"${ranorexProjectExecutable}" /ts:Test_Execution.rxtst /rc:TestRun /junit /zipreport`;
+        
+        console.log(`=== executing command ===`);
+        try {
+            console.log(command);
+            //execSync(command, {stdio: "inherit"});
+        } catch(e) {
+            console.log('=== error: ', e.stack, ' ===');
         }
+        console.log(`=== command completed ===`);
+
+        await uploadResults();
+    // we did not schedule test runs and therefore want to run the RunConfig as-is
     } else {
         process.chdir(ranorexProjectDir)
         let command = `"${ranorexProjectExecutable}" /runconfig:${runConfig} /junit /zipreport`;
@@ -184,7 +212,7 @@ const main = async () => {
         console.log(`=== executing command ===`);
         try {
             console.log(command);
-            execSync(command, {stdio: "inherit"});
+            //execSync(command, {stdio: "inherit"});
         } catch(e) {
             console.log('=== error: ', e.stack, ' ===');
         }
