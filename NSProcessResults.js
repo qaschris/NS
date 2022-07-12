@@ -249,8 +249,7 @@ exports.handler = async function ({ event: body, constants, triggers }, context,
 			var newTestRunPayload = testRunPayload;
 			newTestRunPayload.parentId = testSuiteId;
 			newTestRunPayload.parentType = 'test-suite';
-			newTestRunPayload.test_case = {};
-			newTestRunPayload.test_case.id = testCaseId;
+			newTestRunPayload.testCaseId = testCaseId;
 
             var options = {
 				'method': 'POST',
@@ -422,7 +421,7 @@ exports.handler = async function ({ event: body, constants, triggers }, context,
                     await searchForTestCase(projectId, currentAutomationContent).then(async(object) => {
                         let foundTestCase = JSON.parse(object);
                         console.log('[INFO]: Creating Test Run...');
-                        await createTestRun(projectId, currentTestRunParentSuiteId, foundTestCase[0].id, currentTestRun).then(async(object) => {
+                        await createTestRun(projectId, testsuiteId, foundTestCase.items[0].id, currentTestRun).then(async(object) => {
                             let createdTestRunId = JSON.parse(object.id);
                             console.log('[INFO]: Creating Test Log...');
                             createTestLog(projectId, currentTestRun, createdTestRunId);
