@@ -243,13 +243,14 @@ exports.handler = async function ({ event: body, constants, triggers }, context,
         });
     }
 
-	const createTestRun = async(ProjectId, testSuiteId, testCaseId, testRunPayload) => {
+	const createTestRun = async(ProjectId, testSuiteId, testCaseId, testRunPayload, testCasePayload) => {
         console.log('[DEBUG] (createTestRun): Executing with parameters ' + [ProjectId, JSON.stringify(testRunPayload)].join(', '));
         return await new Promise(async(resolve, reject) => {
 			var newTestRunPayload = testRunPayload;
 			newTestRunPayload.parentId = testSuiteId;
 			newTestRunPayload.parentType = 'test-suite';
 			newTestRunPayload.testCaseId = testCaseId;
+            newTestRunPayload.test_case = testCasePayload;
 
             var options = {
 				'method': 'POST',
@@ -395,7 +396,7 @@ exports.handler = async function ({ event: body, constants, triggers }, context,
                         }); */
                     } else if (foundTestCase.items.length >= 1){
                         console.log('[INFO]: Creating Test Run...');
-                        await createTestRun(projectId, currentTestRunParentSuiteId, foundTestCase.id, currentTestRun).then(async(object) => {
+                        await createTestRun(projectId, testsuiteId, foundTestCase.items[0].id, currentTestRun, foundTestCase.items[0]).then(async(object) => {
                             let createdTestRunId = JSON.parse(object.id);
                             console.log('[INFO]: Creating Test Log...');
                             createTestLog(projectId, currentTestRun, createdTestRunId);
@@ -421,7 +422,7 @@ exports.handler = async function ({ event: body, constants, triggers }, context,
                     await searchForTestCase(projectId, currentAutomationContent).then(async(object) => {
                         let foundTestCase = JSON.parse(object);
                         console.log('[INFO]: Creating Test Run...');
-                        await createTestRun(projectId, testsuiteId, foundTestCase.items[0].id, currentTestRun).then(async(object) => {
+                        await createTestRun(projectId, testsuiteId, foundTestCase.items[0].id, currentTestRun, foundTestCase.items[0]).then(async(object) => {
                             let createdTestRunId = JSON.parse(object.id);
                             console.log('[INFO]: Creating Test Log...');
                             createTestLog(projectId, currentTestRun, createdTestRunId);
