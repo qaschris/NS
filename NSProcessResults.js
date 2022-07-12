@@ -397,7 +397,7 @@ exports.handler = async function ({ event: body, constants, triggers }, context,
                     } else if (foundTestCase.items.length >= 1){
                         console.log('[INFO]: Creating Test Run...');
                         await createTestRun(projectId, testsuiteId, foundTestCase.items[0].id, currentTestRun, foundTestCase.items[0]).then(async(object) => {
-                            let createdTestRunId = JSON.parse(object.id);
+                            let createdTestRunId = object.id;
                             console.log('[INFO]: Creating Test Log...');
                             createTestLog(projectId, currentTestRun, createdTestRunId);
                         });
@@ -423,7 +423,7 @@ exports.handler = async function ({ event: body, constants, triggers }, context,
                         let foundTestCase = JSON.parse(object);
                         console.log('[INFO]: Creating Test Run...');
                         await createTestRun(projectId, testsuiteId, foundTestCase.items[0].id, currentTestRun, foundTestCase.items[0]).then(async(object) => {
-                            let createdTestRunId = JSON.parse(object.id);
+                            let createdTestRunId = object.id;
                             console.log('[INFO]: Creating Test Log...');
                             createTestLog(projectId, currentTestRun, createdTestRunId);
                         });
