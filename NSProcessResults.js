@@ -405,26 +405,29 @@ exports.handler = async function ({ event: body, constants, triggers }, context,
 				});
 			} else if (foundTestRun.items.length >= 1) {
 				// test run exists, match parent
+                let matchingParent = 0;
                 console.log('[INFO]: Test Runs found, matching parent ID...');
                 for (let r=0; r<foundTestRun.items.length; r++) {
                     if (foundTestRun.items[r].parentId == testsuiteId) {
                         console.log('[INFO]: Matching parent ID found, creating test log...');
                         // add a new log
+                        matchingParent = 1;
                         let testRunId = foundTestRun.items[r].id;
                         createTestLog(projectId, currentTestRun, testRunId);
-                    } else {
-                        console.log('[WARN]: Test Run with matching parent ID not found!');
-                        console.log('[INFO]: Finding Test Case...');
-                        await searchForTestCase(projectId, currentAutomationContent).then(async(object) => {
-                            let foundTestCase = JSON.parse(object);
-                            console.log('[INFO]: Creating Test Run...');
-                            await createTestRun(projectId, currentTestRunParentSuiteId, foundTestCase[0].id, currentTestRun).then(async(object) => {
-                                let createdTestRunId = JSON.parse(object.id);
-                                console.log('[INFO]: Creating Test Log...');
-                                createTestLog(projectId, currentTestRun, createdTestRunId);
-                            });
+                    }                     
+                }
+                if (matchingParent == 0) {
+                    console.log('[WARN]: Test Run with matching parent ID not found!');
+                    console.log('[INFO]: Finding Test Case...');
+                    await searchForTestCase(projectId, currentAutomationContent).then(async(object) => {
+                        let foundTestCase = JSON.parse(object);
+                        console.log('[INFO]: Creating Test Run...');
+                        await createTestRun(projectId, currentTestRunParentSuiteId, foundTestCase[0].id, currentTestRun).then(async(object) => {
+                            let createdTestRunId = JSON.parse(object.id);
+                            console.log('[INFO]: Creating Test Log...');
+                            createTestLog(projectId, currentTestRun, createdTestRunId);
                         });
-                    }
+                    });
                 }
 			};
 		}).catch((error) => {
