@@ -105,7 +105,7 @@ exports.handler = async function ({ event: body, constants, triggers }, context,
                     "fields": [
                         "*"
                     ],
-                    "query": "'name' = '" + AutomationContent + "'"
+                    "query": "'automation_content' = '" + AutomationContent + "'"
                 })
             };
             request(options, function (error, response) {
@@ -136,7 +136,7 @@ exports.handler = async function ({ event: body, constants, triggers }, context,
                     "fields": [
                         "*"
                     ],
-                    "query": "'name' = '" + AutomationContent + "'"
+                    "query": "'automation_content' = '" + AutomationContent + "'"
                 })
             };
             request(options, function (error, response) {
@@ -351,12 +351,16 @@ exports.handler = async function ({ event: body, constants, triggers }, context,
                 console.log('[INFO]: Finding Test Case...');
                 await searchForTestCase(projectId, currentAutomationContent).then(async(object) => {
                     let foundTestCase = JSON.parse(object);
-                    console.log('[INFO]: Creating Test Run...');
-                    await createTestRun(projectId, testsuiteId, foundTestCase.items[0].id, currentTestRun, foundTestCase.items[0]).then(async(object) => {
-                        let createdTestRunId = object.id;
-                        console.log('[INFO]: Creating Test Log...');
-                        createTestLog(projectId, currentTestRun, createdTestRunId);
-                    });
+                    if (foundTestCase.items.length == 0) {
+                        console.log('[ERROR]: Test Case with matching Automation Content not found!  Create and/or Update in qTest.');
+                    } else {
+                        console.log('[INFO]: Creating Test Run...');
+                        await createTestRun(projectId, testsuiteId, foundTestCase.items[0].id, currentTestRun, foundTestCase.items[0]).then(async(object) => {
+                            let createdTestRunId = object.id;
+                            console.log('[INFO]: Creating Test Log...');
+                            createTestLog(projectId, currentTestRun, createdTestRunId);
+                        });
+                    }
                 });
 			} else if (foundTestRun.items.length >= 1) {
 				// test run exists, match parent
@@ -376,12 +380,16 @@ exports.handler = async function ({ event: body, constants, triggers }, context,
                     console.log('[INFO]: Finding Test Case...');
                     await searchForTestCase(projectId, currentAutomationContent).then(async(object) => {
                         let foundTestCase = JSON.parse(object);
-                        console.log('[INFO]: Creating Test Run...');
-                        await createTestRun(projectId, testsuiteId, foundTestCase.items[0].id, currentTestRun, foundTestCase.items[0]).then(async(object) => {
-                            let createdTestRunId = object.id;
-                            console.log('[INFO]: Creating Test Log...');
-                            createTestLog(projectId, currentTestRun, createdTestRunId);
-                        });
+                        if (foundTestCase.items.length == 0) {
+                            console.log('[ERROR]: Test Case with matching Automation Content not found!  Create and/or Update in qTest.');
+                        } else {
+                            console.log('[INFO]: Creating Test Run...');
+                            await createTestRun(projectId, testsuiteId, foundTestCase.items[0].id, currentTestRun, foundTestCase.items[0]).then(async(object) => {
+                                let createdTestRunId = object.id;
+                                console.log('[INFO]: Creating Test Log...');
+                                createTestLog(projectId, currentTestRun, createdTestRunId);
+                            });
+                        }
                     });
                 }
 			};
