@@ -341,68 +341,23 @@ exports.handler = async function ({ event: body, constants, triggers }, context,
 		let currentTestRun = testLogs[i];
 		currentTestRun.properties = qTestAttachmentURLFieldContent;
 		let foundTestRun;
-		let currentTestRunParentCycleId;
-		let currentTestRunParentSuiteId;
 		let currentAutomationContent = testLogs[i].automation_content;
         console.log('[INFO]: Finding Test Runs...');
 		await searchForTestRun(projectId, currentAutomationContent).then(async(object) => {
 			foundTestRun = JSON.parse(object);
 			if (foundTestRun.items.length == 0) {
 				// test run doesn't exist, create it first
-				let currentTestRunParentCycle = qTestFoldersList.find(obj => obj.name === currentTestRun.module_names[0]);
-				if (currentTestRunParentCycle) {
-					currentTestRunParentCycleId = currentTestRunParentCycle.id;
-					if (currentTestRunParentCycle['test-suites']) {
-						let currentTestRunParentSuite = currentTestRunParentCycle['test-suites'].find(obj => obj.name === currentTestRun.module_names[1]);
-						if (currentTestRunParentSuite) {
-							currentTestRunParentSuiteId = currentTestRunParentSuite.id;
-						} else {
-							// suite doesn't exist, create it first
-							await createTestSuite(projectId, currentTestRunParentCycleId, currentTestRun.module_names[1]).then(async(object) => {
-								currentTestRunParentSuiteId = object;
-							})
-						}
-					} else {
-						// suite doesn't exist, create it first
-						await createTestSuite(projectId, currentTestRunParentCycleId, currentTestRun.module_names[1]).then(async(object) => {
-							currentTestRunParentSuiteId = object;
-						})
-					}
-				} else {	
-					// cycle doesn't exist, create it first
-					await createTestCycle(projectId, currentTestRun.module_names[0]).then(async(object) => {
-						currentTestRunParentCycleId = object;
-					})
-					// if the cycle didn't exist, the suite definitely doesn't exist, create it first
-					await createTestSuite(projectId, currentTestRunParentCycleId, currentTestRun.module_names[1]).then(async(object) => {
-						currentTestRunParentSuiteId = object;
-					})
-				}
-				console.log('[DEBUG]: Cycle: ' + currentTestRunParentCycleId + ' Suite: ' + currentTestRunParentSuiteId);
+                console.log('[WARN]: Test Run with matching parent ID not found!');
                 console.log('[INFO]: Finding Test Case...');
-				await searchForTestCase(projectId, currentAutomationContent).then(async(object) => {
+                await searchForTestCase(projectId, currentAutomationContent).then(async(object) => {
                     let foundTestCase = JSON.parse(object);
-                    if (foundTestCase.items.length == 0) {
-                        console.log('[ERROR]: Test Case with matching Automation Content not found!  Create and/or Update in qTest.');
-/*                         console.log('[INFO]: Creating Test Case...');                                
-                        await createTestCase(projectId, currentTestRun).then(async(object) => {
-                            let createdTestCaseId = JSON.parse(object.id);
-                            console.log('[INFO]: Creating Test Run...');
-                            await createTestRun(projectId, currentTestRunParentSuiteId, createdTestCaseId, currentTestRun).then(async(object) => {
-                                let createdTestRunId = JSON.parse(object.id);
-                                console.log('[INFO]: Creating Test Log...');
-                                createTestLog(projectId, currentTestRun, createdTestRunId);
-                            });
-                        }); */
-                    } else if (foundTestCase.items.length >= 1){
-                        console.log('[INFO]: Creating Test Run...');
-                        await createTestRun(projectId, testsuiteId, foundTestCase.items[0].id, currentTestRun, foundTestCase.items[0]).then(async(object) => {
-                            let createdTestRunId = object.id;
-                            console.log('[INFO]: Creating Test Log...');
-                            createTestLog(projectId, currentTestRun, createdTestRunId);
-                        });
-                    }
-				});
+                    console.log('[INFO]: Creating Test Run...');
+                    await createTestRun(projectId, testsuiteId, foundTestCase.items[0].id, currentTestRun, foundTestCase.items[0]).then(async(object) => {
+                        let createdTestRunId = object.id;
+                        console.log('[INFO]: Creating Test Log...');
+                        createTestLog(projectId, currentTestRun, createdTestRunId);
+                    });
+                });
 			} else if (foundTestRun.items.length >= 1) {
 				// test run exists, match parent
                 let matchingParent = 0;
