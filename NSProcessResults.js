@@ -233,7 +233,7 @@ exports.handler = async function ({ event: body, constants, triggers }, context,
                             console.log('[INFO]: Creating Test Log...');
                             await createTestLog(projectId, testLogs[i], createdTestRunId).then(async(object) => {
                                 console.log('[INFO]: Created Test Log ' + object);
-                            }
+                            })
                         });
                     }
                 });
@@ -249,7 +249,7 @@ exports.handler = async function ({ event: body, constants, triggers }, context,
                         let testRunId = foundTestRun.items[r].id;
                         await createTestLog(projectId, testLogs[i], testRunId).then(async(object) => {
                             console.log('[INFO]: Created Test Log ' + object);
-                        }
+                        })
                     }                     
                 }
                 if (matchingParent == 0) {
@@ -266,7 +266,7 @@ exports.handler = async function ({ event: body, constants, triggers }, context,
                                 console.log('[INFO]: Creating Test Log...');
                                 await createTestLog(projectId, testLogs[i], createdTestRunId).then(async(object) => {
                                     console.log('[INFO]: Created Test Log ' + object);
-                                }
+                                })
                             });
                         }
                     });
