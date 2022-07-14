@@ -41,30 +41,6 @@ exports.handler = async function ({ event: body, constants, triggers }, context,
 		return t && new Webhooks().invoke(t, payload);
 	}
 
-	const getManagerFolderStructure = async(ProjectId) => {
-		console.log('[DEBUG] (getManagerFolderStructure): Executing with parameters ' + ProjectId);
-		return await new Promise(async(resolve, reject) => {
-			var options = {
-			'method': 'GET',
-			'url': 'https://'+constants.ManagerURL+'/api/v3/projects/'+ProjectId+'/test-cycles?parentId=0&parentType=root&expand=descendants',
-			'headers': {
-				'Authorization': 'Bearer ' + constants.QTEST_TOKEN,
-				'Accept-Type': 'application/json',
-				'Content-Type': 'application/json'
-			}
-			};
-			request(options, function (error, response) {
-				if (error) {
-					console.log('[ERROR] (getManagerFolderStructure):' + JSON.stringify(error));
-					return reject(error);
-				} else {
-					console.log('[DEBUG] (getManagerFolderStructure): ' + response.body);
-					return resolve(response.body);
-				}
-			});
-		});
-    };
-
     const getTestRunFieldValues = async(ProjectId) => {
         console.log('[DEBUG] (getTestRunFieldValues): Executing with parameters ' + ProjectId);
         return await new Promise(async(resolve, reject) => {        
@@ -105,7 +81,7 @@ exports.handler = async function ({ event: body, constants, triggers }, context,
                     "fields": [
                         "*"
                     ],
-                    "query": "'automation_content' = '" + AutomationContent + "'"
+                    "query": "'Test Case Automation Content' = '" + AutomationContent + "'"
                 })
             };
             request(options, function (error, response) {
@@ -113,7 +89,7 @@ exports.handler = async function ({ event: body, constants, triggers }, context,
                     console.log('[ERROR] (searchForTestRun):' + error);
                     return reject(error);
                 } else {
-                    console.log('[DEBUG] (searchForTestRun): Returned: ' + response.body);
+                    console.log('[DEBUG] (searchForTestRun): Response Body: ' + response.body);
                     return resolve(response.body);
                 }
             });
@@ -136,7 +112,7 @@ exports.handler = async function ({ event: body, constants, triggers }, context,
                     "fields": [
                         "*"
                     ],
-                    "query": "'automation_content' = '" + AutomationContent + "'"
+                    "query": "'Automation Content' = '" + AutomationContent + "'"
                 })
             };
             request(options, function (error, response) {
@@ -144,12 +120,46 @@ exports.handler = async function ({ event: body, constants, triggers }, context,
                     console.log('[ERROR] (searchForTestCase):' + error);
                     return reject(error);
                 } else {
-                    console.log('[DEBUG] (searchForTestCase): ' + response.body);
+                    console.log('[DEBUG] (searchForTestCase) Response Body: ' + response.body);
                     return resolve(response.body);
                 }
             });
         });
     };
+
+	const createTestRun = async(ProjectId, testSuiteId, testCaseId, testRunPayload, testCasePayload) => {
+        console.log('[DEBUG] (createTestRun): Executing with parameters ' + [ProjectId, JSON.stringify(testRunPayload)].join(', '));
+        return await new Promise(async(resolve, reject) => {
+			var newTestRunPayload = testRunPayload;
+			newTestRunPayload.parentId = testSuiteId;
+			newTestRunPayload.parentType = 'test-suite';
+			newTestRunPayload.testCaseId = testCaseId;
+            newTestRunPayload.test_case = testCasePayload;
+
+            var options = {
+				'method': 'POST',
+                'url': 'https://'+constants.ManagerURL+'/api/v3/projects/'+ProjectId+'/test-runs?parentId='+testSuiteId+'&parentType=test-suite',
+                'headers': {
+                'Authorization': 'Bearer ' + constants.QTEST_TOKEN,
+                'Accept-Type': 'application/json',
+                'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(newTestRunPayload)
+            };
+            console.log('[DEBUG] (createTestRun) Request: ' + JSON.stringify(newTestRunPayload));
+            request(options, function (error, response) {
+                if (error) {
+                    console.log('[ERROR] (createTestRun):' + JSON.stringify(error));
+                    return reject(error);
+                } else {
+                    console.log('[DEBUG] (createTestRun) Response: ' + JSON.stringify(response));
+                    console.log('[DEBUG] (createTestRun) Response Body: ' + response.body);
+                    let responseObject = JSON.parse(response.body);
+                    return resolve(responseObject.id);
+                }
+            });
+        });
+    }
 	
 	const createTestLog = async(ProjectId, testcasePayload, testRunId) => {
         console.log('[DEBUG] (createTestLog): Executing with parameters ' + [ProjectId, JSON.stringify(testcasePayload), testRunId].join(', '));
@@ -178,150 +188,13 @@ exports.handler = async function ({ event: body, constants, triggers }, context,
             });
         });
     }
-	
-	const createTestCycle = async(ProjectId, testCycleName) => {
-        console.log('[DEBUG] (createTestCycle): Executing with parameters ' + [ProjectId, testCycleName].join(', '));
-        return await new Promise(async(resolve, reject) => {
-			var testCyclePayload = {
-				'name': testCycleName
-			  }
-            var options = {
-				'method': 'POST',
-                'url': 'https://'+constants.ManagerURL+'/api/v3/projects/'+ProjectId+'/test-cycles?parentId=0&parentType=root',
-                'headers': {
-                'Authorization': 'Bearer ' + constants.QTEST_TOKEN,
-                'Accept-Type': 'application/json',
-                'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(testCyclePayload)
-            };
-            console.log('[DEBUG] (createTestCycle) Request: ' + JSON.stringify(testCyclePayload));
-            request(options, function (error, response) {
-                if (error) {
-                    console.log('[ERROR] (createTestCycle):' + JSON.stringify(error));
-                    return reject(error);
-                } else {
-                    //console.log('[DEBUG]: ' + JSON.stringify(response));
-                    console.log('[DEBUG] (createTestCycle): ' + response.body);
-                    let responseObject = JSON.parse(response.body);
-                    return resolve(responseObject.id);
-                }
-            });
-        });
-    }
-	
-	const createTestSuite = async(ProjectId, ParentId, testSuiteName) => {
-        console.log('[DEBUG] (createTestSuite): Executing with parameters ' + [ProjectId, ParentId, testSuiteName].join(', '));
-        return await new Promise(async(resolve, reject) => {
-			var testSuitePayload = {
-				'parentId': ParentId,
-				'parentType': 'test-cycle',
-				'name': testSuiteName
-			  }
-            var options = {
-				'method': 'POST',
-                'url': 'https://'+constants.ManagerURL+'/api/v3/projects/'+ProjectId+'/test-suites?parentId='+ParentId+'&parentType=test-cycle',
-                'headers': {
-                'Authorization': 'Bearer ' + constants.QTEST_TOKEN,
-                'Accept-Type': 'application/json',
-                'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(testSuitePayload)
-            };
-            console.log('[DEBUG] (createTestSuite) Request: ' + JSON.stringify(testSuitePayload));
-            request(options, function (error, response) {
-                if (error) {
-                    console.log('[ERROR] (createTestSuite):' + JSON.stringify(error));
-                    return reject(error);
-                } else {
-                    //console.log('[DEBUG]: ' + JSON.stringify(response));
-                    console.log('[DEBUG] (createTestSuite): ' + response.body);
-                    let responseObject = JSON.parse(response.body);
-                    return resolve(responseObject.id);
-                }
-            });
-        });
-    }
-
-	const createTestRun = async(ProjectId, testSuiteId, testCaseId, testRunPayload, testCasePayload) => {
-        console.log('[DEBUG] (createTestRun): Executing with parameters ' + [ProjectId, JSON.stringify(testRunPayload)].join(', '));
-        return await new Promise(async(resolve, reject) => {
-			var newTestRunPayload = testRunPayload;
-			newTestRunPayload.parentId = testSuiteId;
-			newTestRunPayload.parentType = 'test-suite';
-			newTestRunPayload.testCaseId = testCaseId;
-            newTestRunPayload.test_case = testCasePayload;
-
-            var options = {
-				'method': 'POST',
-                'url': 'https://'+constants.ManagerURL+'/api/v3/projects/'+ProjectId+'/test-runs?parentId='+testSuiteId+'&parentType=test-suite',
-                'headers': {
-                'Authorization': 'Bearer ' + constants.QTEST_TOKEN,
-                'Accept-Type': 'application/json',
-                'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(newTestRunPayload)
-            };
-            console.log('[DEBUG] (createTestRun) Request: ' + JSON.stringify(newTestRunPayload));
-            request(options, function (error, response) {
-                if (error) {
-                    console.log('[ERROR] (createTestRun):' + JSON.stringify(error));
-                    return reject(error);
-                } else {
-                    console.log('[DEBUG]: ' + JSON.stringify(response));
-                    console.log('[DEBUG] (createTestRun): ' + response.body);
-                    let responseObject = JSON.parse(response.body);
-                    return resolve(responseObject.id);
-                }
-            });
-        });
-    }
-
-	const createTestCase = async(ProjectId, testCasePayload) => {
-        console.log('[DEBUG] (createTestCase): Executing with parameters ' + [ProjectId, JSON.stringify(testCasePayload)].join(', '));
-        return await new Promise(async(resolve, reject) => {
-			var newTestCasePayload = testCasePayload;
-
-            var options = {
-				'method': 'POST',
-                'url': 'https://'+constants.ManagerURL+'/api/v3/projects/'+ProjectId+'/test-case?parentId='+testSuiteId+'&parentType=test-suite',
-                'headers': {
-                'Authorization': 'Bearer ' + constants.QTEST_TOKEN,
-                'Accept-Type': 'application/json',
-                'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(newTestCasePayload)
-            };
-            console.log('[DEBUG] (createTestCase) Request: ' + JSON.stringify(newTestCasePayload));
-            request(options, function (error, response) {
-                if (error) {
-                    console.log('[ERROR] (createTestCase):' + JSON.stringify(error));
-                    return reject(error);
-                } else {
-                    console.log('[DEBUG]: ' + JSON.stringify(response));
-                    console.log('[DEBUG] (createTestCase): ' + response.body);
-                    let responseObject = JSON.parse(response.body);
-                    return resolve(responseObject.id);
-                }
-            });
-        });
-    }
   
 	var payload = body;
 
 	var testLogs = payload.logs;
 	var projectId = payload.projectId;
     var testsuiteId = payload.testsuiteId;
-	
-	console.log('[INFO]: About to collect Folder information...');
-	let qTestFoldersList;
-	await getManagerFolderStructure(projectId).then((object) => {
-		qTestFoldersList = JSON.parse(object);
-		console.log('[INFO]: '+qTestFoldersList.length+' folders found.');
-	}).catch((error) => {
-		console.log(error);
-	})
-
+    
 	let qTestTestRunFieldValues;
 	await getTestRunFieldValues(projectId).then((object) => {
 		qTestTestRunFieldValues = JSON.parse(object);
@@ -342,7 +215,7 @@ exports.handler = async function ({ event: body, constants, triggers }, context,
 		currentTestRun.properties = qTestAttachmentURLFieldContent;
 		let foundTestRun;
 		let currentAutomationContent = testLogs[i].automation_content;
-        console.log('[INFO]: Finding Test Runs...');
+        console.log('[INFO]: Finding Test Runs matching ' + currentAutomationContent + '...');
 		await searchForTestRun(projectId, currentAutomationContent).then(async(object) => {
 			foundTestRun = JSON.parse(object);
 			if (foundTestRun.items.length == 0) {
@@ -356,9 +229,11 @@ exports.handler = async function ({ event: body, constants, triggers }, context,
                     } else {
                         console.log('[INFO]: Creating Test Run...');
                         await createTestRun(projectId, testsuiteId, foundTestCase.items[0].id, currentTestRun, foundTestCase.items[0]).then(async(object) => {
-                            let createdTestRunId = object.id;
+                            let createdTestRunId = object;
                             console.log('[INFO]: Creating Test Log...');
-                            createTestLog(projectId, currentTestRun, createdTestRunId);
+                            await createTestLog(projectId, testLogs[i], createdTestRunId).then(async(object) => {
+                                console.log('[INFO]: Created Test Log ' + object);
+                            }
                         });
                     }
                 });
@@ -372,7 +247,9 @@ exports.handler = async function ({ event: body, constants, triggers }, context,
                         // add a new log
                         matchingParent = 1;
                         let testRunId = foundTestRun.items[r].id;
-                        createTestLog(projectId, currentTestRun, testRunId);
+                        await createTestLog(projectId, testLogs[i], testRunId).then(async(object) => {
+                            console.log('[INFO]: Created Test Log ' + object);
+                        }
                     }                     
                 }
                 if (matchingParent == 0) {
@@ -385,9 +262,11 @@ exports.handler = async function ({ event: body, constants, triggers }, context,
                         } else {
                             console.log('[INFO]: Creating Test Run...');
                             await createTestRun(projectId, testsuiteId, foundTestCase.items[0].id, currentTestRun, foundTestCase.items[0]).then(async(object) => {
-                                let createdTestRunId = object.id;
+                                let createdTestRunId = object;
                                 console.log('[INFO]: Creating Test Log...');
-                                createTestLog(projectId, currentTestRun, createdTestRunId);
+                                await createTestLog(projectId, testLogs[i], createdTestRunId).then(async(object) => {
+                                    console.log('[INFO]: Created Test Log ' + object);
+                                }
                             });
                         }
                     });
