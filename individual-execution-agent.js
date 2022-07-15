@@ -45,7 +45,7 @@ const main = async () => {
     const ranorexProjectExecutable = 'C:\\Users\\chrpe\\Documents\\Repository\\Tricentis.Pulse.Integrations\\NSCorp\\Execute.exe'; // Ranorex executable name (e.g.: RxDatabase.exe)
     const pythonBuildScript = 'C:\\Ranorex_Automation_Scripts\\PTC_Lab_Automation\\PTC_Lab_Automation\\TricentisIndividualTestRun.py'; // Location of the Python RunConfig editor and MSBuild script
     const reportDir = `${ranorexProjectDir}\\Reports`;  // Ranorex reports directory
-    
+
     const uploadResults = async () => {
         let junit = '';
         let rxzlog = '';
@@ -132,76 +132,31 @@ const main = async () => {
         });
     }
 
-    let testrunList = JSON.parse($TESTRUNS_LIST);
-
-/*     
-    let opts = {
-        url: `${process.env.QTEST_URL}/api/v3/projects/${process.env.PROJECT_ID}/test-suites/${testsuiteId}`,
-        headers: {
-            'Authorization': process.env.AUTH_TOKEN
-        }
-    };
-    
-    let runConfig = await new Promise(function(resolve, reject) {
-        request.get(opts, function (err, response, resbody) {
-            if (err) {
-                console.log('=== error: ' + err + ' ===');
-                reject(err);
-            } else if (response.statusCode > 299) {                    
-                console.log('=== error: ' + response.body.substring(response.body.lastIndexOf("<pre>") + 5, response.body.lastIndexOf("</pre>")) + ' ===');
-                reject(response.body.substring(response.body.lastIndexOf("<pre>") + 5, response.body.lastIndexOf("</pre>")));
-            } else {
-                const body = JSON.parse(resbody);
-                let field_value_name = body.properties.find(x => x.field_name === 'Ranorex Run Config').field_value_name;
-                resolve(field_value_name);
-            }
-        })
-    });
- */
     // We scheduled test runs and therefore want to update the RunConfig and perform a rebuild of the exe.
     // This component is handled by the external python script below.
     if($TESTCASES_AC)
     {
-        let testcases = $TESTCASES_AC.split(' ');
-
-        let runPythonScript = new Promise(function(success, nosuccess) {
-
-            const { spawn } = require('child_process');
-            const pythonScript = spawn('python', [pythonBuildScript, testcases]);
+        let testcases = $TESTCASES_AC.replace(',', ' ');
         
-            pythonScript.stdout.on('data', function(data) {
-        
-                success(data);
-            });
-        
-            pythonScript.stderr.on('data', (data) => {
-        
-                nosuccess(data);
-            });
-        });
-        
-        app.get('/', (req, res) => {
-        
-            res.write('welcome\n');
-        
-            runPythonScript.then(function(fromPythonScript) {
-                console.log(fromPythonScript.toString());
-                res.end(fromPythonScript);
-            });
-        })
-        
-        app.listen(4000, () => console.log('Application listening on port 4000!'))
+        console.log(`=== executing python rebuild script ===`);
+        try {
+            console.log('python', [pythonBuildScript, testcases]);
+            //execSync('python', [pythonBuildScript, testcases], {stdio: "inherit"});
+        } catch(e) {
+            console.log('=== error: ', e.stack, ' ===');
+        }
+        console.log(`=== python rebuild script completed ===`);
 
         let command = `"${ranorexProjectExecutable}" /ts:Test_Execution.rxtst /rc:TestRun /junit /zipreport`;
         
-        console.log(`=== executing command ===`);
+        console.log(`=== executing Ranorex command ===`);
         try {
             console.log(command);
             //execSync(command, {stdio: "inherit"});
         } catch(e) {
             console.log('=== error: ', e.stack, ' ===');
         }
-        console.log(`=== command completed ===`);
+        console.log(`=== Ranorex command completed ===`);
 
         await uploadResults();
     // we did not schedule test runs and therefore want to run the RunConfig as-is
@@ -209,14 +164,14 @@ const main = async () => {
         process.chdir(ranorexProjectDir)
         let command = `"${ranorexProjectExecutable}" /runconfig:${runConfig} /junit /zipreport`;
         
-        console.log(`=== executing command ===`);
+        console.log(`=== executing Ranorex command ===`);
         try {
             console.log(command);
             //execSync(command, {stdio: "inherit"});
         } catch(e) {
             console.log('=== error: ', e.stack, ' ===');
         }
-        console.log(`=== command completed ===`);
+        console.log(`=== Ranorex command completed ===`);
 
         await uploadResults();
     }
